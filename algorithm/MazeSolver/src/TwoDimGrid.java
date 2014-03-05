@@ -297,6 +297,25 @@ public class TwoDimGrid extends JPanel {
 		
 		return grid[x][y].getBackground() == WALL;
 	}
+	
+	public boolean isWalkable(int direction, int x, int y) {
+		switch (direction){
+		case 1:
+			return !isWall(x+2,y-1)&&!isWall(x+2,y+1)&&!isWall(x+2,y);
+			
+		case 2:
+			return !isWall(x-1,y+2)&&!isWall(x,y+2)&&!isWall(x+1,y+2);
+			
+		case 3:
+			return !isWall(x-2,y-1)&&!isWall(x-2,y)&&!isWall(x-2,y+1);
+			
+		case 4:
+			return !isWall(x-1,y-2)&&!isWall(x,y-2)&&!isWall(x+1,y-2);
+			
+		}
+		return true;
+	}
+	
 	public boolean isUnexplored(int x, int y) {
 		return grid[x][y].getBackground() == UNEXPLORED;
 	}
@@ -330,6 +349,10 @@ public class TwoDimGrid extends JPanel {
 		grid[x][y].setBackground(TENTATIVE);
 	}
 	
+	public void directionExplore(int x, int y) {
+		grid[x][y].setBackground(Color.red);
+	}
+	
 	public void updateCurrentPosition(int direction, int x, int y) {
 		explore(x-1, y-1);
 		explore(x, y-1);
@@ -340,6 +363,20 @@ public class TwoDimGrid extends JPanel {
 		explore(x-1, y+1);
 		explore(x, y+1);
 		explore(x+1, y+1);
+		switch (direction){
+		case 1:
+			directionExplore(x+1,y);
+			break;
+		case 2:
+			directionExplore(x,y+1);
+			break;
+		case 3:
+			directionExplore(x-1,y);
+			break;
+		case 4:
+			directionExplore(x,y-1);
+			break;
+		}
 	}
 	
 	public void traversed(int x, int y){

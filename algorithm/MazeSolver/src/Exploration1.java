@@ -5,6 +5,7 @@ import java.awt.event.ActionListener;
 import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Stack;
 
 import javax.swing.JLabel;
 
@@ -13,11 +14,12 @@ import javax.swing.JLabel;
  * @author stoh003
  */
 public class Exploration1 implements Runnable {
-	protected static final int SLEEP_TIME = 100;
+	protected static final int SLEEP_TIME = 50;
 	private static TwoDimGrid maze;
 	private static updatedMaze updatemaze;
 	private static Maze mazemaze;
 	private static Reminder reminder;
+	Stack Path = new Stack();
 
 	public Exploration1(TwoDimGrid m) {
 		maze = m;
@@ -392,22 +394,72 @@ public class Exploration1 implements Runnable {
 		}
 	}
 
-	public void mazeTraverse(updatedMaze n, TwoDimGrid maze2, int direction,
-			int x, int y) throws InterruptedException {
-		
+	public void updateSensor(updatedMaze n, TwoDimGrid maze2, int direction, int x, int y){
 		int frontLeft, frontMiddle, frontRight, left, right;
 		frontLeft = frontMiddle = frontRight = 4;
 		left = 4;
 		right = 8;
 		//read from the arduino sensor signals
+		front(n, maze2, direction, x, y, frontLeft,  frontMiddle, frontRight);
+		leftSensor(n, maze2, direction, x, y, left);
+		rightSensor(n, maze2, direction, x, y, right);
+	}
+	
+	public void mazeTraverseTurn(updatedMaze n, TwoDimGrid maze2, int direction,
+			int x, int y) throws InterruptedException {
+	
+		maze2.updateCurrentPosition(direction, x, y);// set current robot
+														// position 2*2 to
+														// yellow
+		n.updateCurrentPosition(x, y);// set the number grid
+
+		Thread.sleep(SLEEP_TIME/2);
+		
+		
+		updateSensor(n, maze2, direction, x, y);
+		
+		Thread.sleep(SLEEP_TIME);// freeze time
+        
+		maze2.traversedPath(x, y);
+		
+		switch (direction){
+		case 1:
+			mazeTraverse(n, maze, direction,x+1, y);
+			break;
+		case 3:
+			mazeTraverse(n, maze, direction,x-1, y);
+			break;
+		case 2:
+			mazeTraverse(n, maze, direction,x, y+1);
+			break;
+		case 4:
+			mazeTraverse(n, maze, direction,x, y-1);
+			break;
+		}
+	}
+	
+	public void mazeTraverse(updatedMaze n, TwoDimGrid maze2, int direction,
+			int x, int y) throws InterruptedException {
+	
+		maze2.updateCurrentPosition(direction, x, y);// set current robot
+														// position 2*2 to
+														// yellow
+		n.updateCurrentPosition(x, y);// set the number grid
+
+		Thread.sleep(SLEEP_TIME/2);
+		
+		
+		updateSensor(n, maze2, direction, x, y);
+		
+		Thread.sleep(SLEEP_TIME);// freeze time
+
+		maze2.traversedPath(x, y);// mark position as traversedPath
+
 		
 	
 		// System.out.println(count);
 		if (maze2.gettraversedPath(15, 20)) {
 
-			front(n, maze2, direction, x, y, frontLeft,  frontMiddle, frontRight);
-			leftSensor(n, maze2, direction, x, y, left);
-			rightSensor(n, maze2, direction, x, y, right);
 
 			System.out.println("Maze explored");
 
@@ -448,7 +500,7 @@ public class Exploration1 implements Runnable {
 						n.clearUnExplored(i, j);
 				}
 			}
-			Thread.sleep(8000);
+			
 			String h = "";
 			for (int i = 1; i < 16; i++) {
 				for (int j = 1; j < 21; j++) {
@@ -484,334 +536,55 @@ public class Exploration1 implements Runnable {
 		Arrays.fill(traversedDirection, Boolean.FALSE);
 		traversedDirection[(direction + 1) % 4 + 1] = true;// no need to go the
 		// reverse direction
-
 		
-
-		maze2.updateCurrentPosition(direction, x, y);// set current robot
-														// position 2*2 to
-														// yellow
-		n.updateCurrentPosition(x, y);// set the number grid
-
-		Thread.sleep(SLEEP_TIME/2);
 		
-		front(n, maze2, direction, x, y, frontLeft,  frontMiddle, frontRight);
-		leftSensor(n, maze2, direction, x, y, left);
-		rightSensor(n, maze2, direction, x, y, right);
-		
-		Thread.sleep(SLEEP_TIME);// freeze time
-
-		maze2.traversedPath(x, y);// mark position as traversedPath
-
 		// start recursion
-		if (direction == 4) {// west , should go down, the go up, then go left
-
-			// go to the south
-			if (maze2.isUnexplored(x + 2, y)
-					&& maze2.isUnexplored(x + 2, y - 1)) {//south unexplored
-
-				mazeTraverse(n, maze2, 1, x, y - 1);
-				traversedDirection[1] = true;
-
+		//mazeTraverse(n, maze2, 2, x, y - 1);
+		//traversedDirection[3] = true;
+		
+		switch (direction) {
+		case 1:
+			if (maze2.isWalkable(2, x, y)){
+				mazeTraverseTurn(n, maze2, 2, x, y);
 			}
-
-			// go to north
-			if (maze2.isUnexplored(x - 1, y)
-					&& maze2.isUnexplored(x - 1, y - 1)) {//north unexplored
-				mazeTraverse(n, maze2, 3, x + 1, y);
-				traversedDirection[3] = true;
-
+			else if (maze2.isWalkable(1, x, y)){
+				mazeTraverse(n, maze2, 1, x+1, y);
 			}
-
-			// go to north
-			if ((maze2.isWall(x, y - 2) || maze2.isWall(x + 1, y - 2))
-					&& ((maze2.isWall(x + 2, y) || maze2.isWall(x + 2, y - 1)))
-					&& (!maze2.isWall(x - 1, y) && !maze2.isWall(x - 1, y - 1))) {
-				if (!traversedDirection[3]) {//there is either wall at west and either wall at south and north dont have wall
-					mazeTraverse(n, maze2, 3, x + 1, y);
-					traversedDirection[3] = true;
-				}
-
-			}
-
-			// go to south
-			if (maze2.isWall(x + 2, y + 1) && !maze2.isWall(x + 2, y)
-					&& !maze2.isWall(x + 2, y - 1) && y != 20) {//turn around the obstacle and move south if south no walls
-				if (!traversedDirection[1]) {
-					mazeTraverse(n, maze2, 1, x, y - 1);
-					traversedDirection[1] = true;
-				}
-			}
-
-			// go to north
-			if (maze2.isWall(x - 1, y + 1) && !maze2.isWall(x - 1, y)
-					&& !maze2.isWall(x - 1, y - 1) && (y != 20)) {//turn around the obstacle and move north if north no walls
-				if (!traversedDirection[3]) {
-					mazeTraverse(n, maze2, 3, x, y - 1);
-					traversedDirection[3] = true;
-				}
-
-			}
-
-			// go to west
-			if (!maze2.isWall(x, y - 2) && !maze2.isWall(x + 1, y - 2))// keep moving forward
-			{
-				mazeTraverse(n, maze2, 4, x, y - 1);
-				traversedDirection[4] = true;
-
-			}
-
-			// go to south
-			if (maze2.isWall(x, y - 2) && maze2.isWall(x + 1, y - 2)
-					&& maze2.isWall(x - 1, y) && maze2.isWall(x - 1, y - 1)) {//there is either wall at west and either wall at south and north dont have wall
-				if (!traversedDirection[1]) {
-					mazeTraverse(n, maze2, 1, x, y - 1);
-					traversedDirection[1] = true;
-				}
-			}
-
-			// go to south
-			if (maze2.isWall(x, y - 2) && maze2.isWall(x + 1, y - 2)
-					|| maze2.isWall(x, y - 2) || maze2.isWall(x + 1, y - 2)) {//if there's both or either wall at west, turn default south
-				if (!traversedDirection[1]) {
-					mazeTraverse(n, maze2, 1, x, y - 1);
-					traversedDirection[1] = true;
-				}
-			}
-
-		} else if (direction == 2) {
-
-			// north
-			if (maze2.isUnexplored(x - 2, y)
-					&& maze2.isUnexplored(x - 2, y + 1))  //north unexplored
-			{
-				mazeTraverse(n, maze2, 3, x, y + 1);
-				traversedDirection[3] = true;
-			}
-
-			// south
-			if (maze2.isUnexplored(x + 1, y)
-					&& maze2.isUnexplored(x + 1, y + 1)) {//south unexplored
-				mazeTraverse(n, maze2, 1, x - 1, y);
-				traversedDirection[1] = true;
-			}
-
-			// south
-			if (((maze2.isWall(x, y + 2) && maze2.isWall(x - 2, y + 1)) || (maze2
-					.isWall(x - 1, y + 2) && maze2.isWall(x - 2, y + 1)))
-					&& x != 15) {//there is either wall at east and either wall at north and south dont have wall and not at the bottom of the maze
-
-				if (!traversedDirection[1]) {
-					mazeTraverse(n, maze2, 1, x - 1, y);
-					traversedDirection[1] = true;
-				}
-
-			}
-
-			
-			// north
-			if ((maze2.isWall(x, y + 2) && maze2.isWall(x - 2, y + 1))
-					|| (maze2.isWall(x - 1, y + 2) && maze2
-							.isWall(x - 2, y + 1))) {//there is either wall at east and either wall at north and south dont have wall and at the bottom of the maze
-				if (!traversedDirection[3]) {
-					mazeTraverse(n, maze2, 3, x, y + 1);
-					traversedDirection[3] = true;
-				}
-			}
-
-			// south
-			if (((maze2.isWall(x, y + 2) && maze2.isWall(x - 1, y + 2))
-					|| maze2.isWall(x, y + 2) || maze2.isWall(x - 1, y + 2))
-					&& y == 19) {//if there is both wall or either wall near the right edge of the maze. then turn south
-				System.out.println("go here:" + x + " " + y);
-				if (!traversedDirection[1]) {
-					mazeTraverse(n, maze2, 1, x - 1, y);
-					traversedDirection[1] = true;
-				}
-			}
-						
-			// north
-			if ((maze2.isWall(x, y + 2) && maze2.isWall(x - 1, y + 2))
-					|| maze2.isWall(x, y + 2) || maze2.isWall(x - 1, y + 2)) {//if there is both wall or either wall at east, default turn north
-				if (!traversedDirection[3]) {
-					mazeTraverse(n, maze2, 3, x, y + 1);
-					traversedDirection[3] = true;
-				}
-			}
-
-			// east
-			if (maze2.isWall(x - 2, y - 1) && !maze2.isWall(x - 2, y)
-					&& !maze2.isWall(x - 2, y + 1) && x == 15) {
+			break;
+		case 2:
+			 if (maze2.isWalkable(3, x, y)){
+					mazeTraverseTurn(n, maze2, 3, x, y);
+			 }
+			else if (maze2.isWalkable(2, x, y)){
 				mazeTraverse(n, maze2, 2, x, y + 1);
-				traversedDirection[2] = true;
-			}
-
-			// north
-			if (maze2.isWall(x - 2, y - 1) && !maze2.isWall(x - 2, y)
-					&& !maze2.isWall(x - 2, y + 1)) {
-				if (!traversedDirection[3]) {
-					mazeTraverse(n, maze2, 3, x, y + 1);
-					traversedDirection[3] = true;
-				}
-			}
-
-			// east
-			if (!maze2.isWall(x, y + 2) && !maze2.isWall(x - 1, y + 2)) {
-				if (!traversedDirection[2]) {
-					mazeTraverse(n, maze2, 2, x, y + 1);
-					traversedDirection[2] = true;
-				}
-			}
-
-			// traverse all other directions
-
-		} else if (direction == 1) {
-			
-			// east
-			if (maze2.gettraversedPath(x + 2, y)
-					&& maze2.gettraversedPath(x + 2, y + 1)
-					&& maze2.isWall(x - 1, y + 2)
-					&& (!maze2.isWall(x, y + 2) && !maze2.isWall(x + 1, y + 2))) {
-				mazeTraverse(n, maze2, 2, x + 1, y);
-				traversedDirection[2] = true;
 			}
 			
-			// south
-			if (!maze2.isWall(x + 2, y + 1) && !maze2.isWall(x + 2, y)) {
-				
-				System.out.println("go here south and south"+x+"   "+y);
-				mazeTraverse(n, maze2, 1, x + 1, y);
-				traversedDirection[1] = true;
+			else if (maze2.isWalkable(1, x, y)){
+				mazeTraverseTurn(n, maze2, 1, x, y);
 			}
-
-			// east
-			if ((((maze2.isWall(x + 2, y) && maze2.isWall(x + 2, y + 1)) && maze2
-					.isWall(x, y + 2)) || (maze2.isWall(x + 2, y)
-					&& maze2.isWall(x + 2, y + 1) && maze2.isWall(x + 1, y + 2)))
-					&& x == 14) {
-				if (!traversedDirection[2]) {
-					mazeTraverse(n, maze2, 2, x + 1, y);
-					traversedDirection[2] = true;
-				}
+			break;
+		case 3:
+			if (maze2.isWalkable(3, x, y)){
+				mazeTraverse(n, maze2, 3, x - 1, y);
 			}
-
-			// west
-			if (maze2.isWall(x + 2, y) && maze2.isWall(x + 2, y + 1)
-					&& maze2.isWall(x, y + 2) && maze2.isWall(x + 1, y + 2)) {
-				mazeTraverse(n, maze2, 4, x, y + 1);
-				traversedDirection[4] = true;
+			else if (maze2.isWalkable(2, x, y)){
+				mazeTraverseTurn(n, maze2, 2, x, y+1);
 			}
-
-			// west
-			if (maze2.isWall(x + 2, y) && maze2.isWall(x, y + 2)
-					&& maze2.isWall(x + 1, y + 2) || maze2.isWall(x + 2, y + 1)
-					&& maze2.isWall(x, y + 2) && maze2.isWall(x + 1, y + 2)) {
-				if (!traversedDirection[4]) {
-					mazeTraverse(n, maze2, 4, x, y + 1);
-					traversedDirection[4] = true;
-				}
+			break;
+		case 4:
+			if (maze2.isWalkable(1, x, y)){
+				mazeTraverseTurn(n, maze2, 1, x, y);
 			}
-
-			// east
-			if (maze2.isWall(x + 2, y) && maze2.isWall(x + 2, y + 1)
-					|| maze2.isWall(x + 2, y) || maze2.isWall(x + 2, y + 1)) {
-				if (!traversedDirection[2]) {
-					mazeTraverse(n, maze2, 2, x + 1, y);
-					traversedDirection[2] = true;
-				}
+			else if (maze2.isWalkable(4, x, y)){
+				mazeTraverse(n, maze2, 4, x, y-1);
 			}
+			break;
 
-		} else if (direction == 3) {
-
-			// north
-			if (maze2.gettraversedPath(x - 2, y)
-					&& maze2.gettraversedPath(x - 2, y - 1)
-					&& maze2.isWall(x + 1, y + 1)
-					&& (!maze2.isWall(x, y + 1) && !maze2.isWall(x - 1, y + 1))) {
-				mazeTraverse(n, maze2, 2, x, y - 1);
-				traversedDirection[3] = true;
-			}
-			// north
-			if (!maze2.isWall(x - 2, y) && !maze2.isWall(x - 2, y - 1)) {
-				if (!traversedDirection[3]) {
-					mazeTraverse(n, maze2, 3, x - 1, y);
-					traversedDirection[3] = true;
-				}
-			}
-
-			// east
-			if (((maze2.isWall(x - 2, y) && maze2.isWall(x - 2, y - 1))
-					|| maze2.isWall(x - 2, y) || maze2.isWall(x - 2, y - 1))
-					&& !maze2.isWall(x, y + 1) && !maze2.isWall(x - 1, y + 1))// available
-																				// space
-																				// on
-																				// right
-																				// and
-																				// wall
-																				// ahead
-			{
-				mazeTraverse(n, maze2, 2, x, y - 1);
-				traversedDirection[2] = true;
-			}
-
-			// north
-			if (maze2.isWall(x, y - 2) && !maze2.isWall(x - 2, y)
-					&& !maze2.isWall(x - 2, y - 1)) {
-				if (!traversedDirection[3]) {
-					mazeTraverse(n, maze2, 3, x - 1, y);
-					traversedDirection[3] = true;
-				}
-			}
-
-			// east
-			if (maze2.isWall(x + 1, y + 1) && !maze2.isWall(x, y + 1)
-					&& !maze2.isWall(x - 1, y + 1) && x != 15) {
-				if (!traversedDirection[2]) {
-					mazeTraverse(n, maze2, 2, x, y - 1);
-					traversedDirection[2] = true;
-				}
-			}
-
-			// east
-			if (maze2.isWall(x - 2, y) && maze2.isWall(x - 2, y - 1)
-					&& maze2.isWall(x, y + 1) && maze2.isWall(x - 1, y + 1)
-					&& x == 2) {
-				if (!traversedDirection[2]) {
-					mazeTraverse(n, maze2, 2, x, y - 1);
-					traversedDirection[2] = true;
-				}
-			}
-
-			// west
-			if (maze2.isWall(x - 2, y) && maze2.isWall(x - 2, y - 1)
-					&& maze2.isWall(x, y + 1) && maze2.isWall(x - 1, y + 1)
-					&& x != 2) {
-				mazeTraverse(n, maze2, 4, x - 1, y);
-				traversedDirection[4] = true;
-			}
-
-			// west
-			if ((maze2.isWall(x, y + 1) && maze2.isWall(x - 2, y))
-					|| (maze2.isWall(x - 1, y + 1) && maze2.isWall(x - 2, y))
-					&& x != 2) {
-				if (!traversedDirection[4]) {
-					mazeTraverse(n, maze2, 4, x - 1, y);
-					traversedDirection[4] = true;
-				}
-			}
-
-			// west
-			if ((maze2.isWall(x - 2, y - 1) && maze2.isWall(x - 1, y + 1))
-					|| (maze2.isWall(x - 2, y - 1) && maze2.isWall(x, y + 1))
-					&& x != 2) {
-				if (!traversedDirection[4]) {
-					mazeTraverse(n, maze2, 4, x - 1, y);
-					traversedDirection[4] = true;
-				}
-			}
-
-			// traverse the map
 		}
-
+		
+		//check all direction see if traversed
+		
+		
 		// move back the robot position
 		// mark it as traversed
 		// remove from the StackArray
@@ -819,8 +592,8 @@ public class Exploration1 implements Runnable {
 	}
 
 	public void findMazePath() throws InterruptedException {
-		mazeTraverse(updatemaze, maze, 1, 1, 2);
-		mazeTraverse(updatemaze, maze, 2, 1, 2);// to return no path only when
+		mazeTraverse(updatemaze, maze, 2, 2, 2);
+		//mazeTraverse2(updatemaze, maze, 1, 2, 2);// to return no path only when
 												// both two no path
 	}
 
