@@ -542,6 +542,9 @@ public class Exploration1 implements Runnable {
 		//mazeTraverse(n, maze2, 2, x, y - 1);
 		//traversedDirection[3] = true;
 		
+		
+//		not handled right hand side yet
+		
 		switch (direction) {
 		case 1:
 			if (maze2.isWalkable(2, x, y)){
@@ -550,6 +553,10 @@ public class Exploration1 implements Runnable {
 			else if (maze2.isWalkable(1, x, y)){
 				mazeTraverse(n, maze2, 1, x+1, y);
 			}
+			else if (maze2.isWalkable(4, x, y)){
+				mazeTraverseTurn(n, maze2, 4, x, y);
+			}
+			
 			break;
 		case 2:
 			 if (maze2.isWalkable(3, x, y)){
@@ -565,10 +572,17 @@ public class Exploration1 implements Runnable {
 			break;
 		case 3:
 			if (maze2.isWalkable(3, x, y)){
+				if (!maze2.isWalkable(4, x+1, y)&&maze2.isWalkable(4, x, y)){
+				mazeTraverseTurn(n, maze2, 4, x, y);
+				}
+				else 
 				mazeTraverse(n, maze2, 3, x - 1, y);
 			}
 			else if (maze2.isWalkable(2, x, y)){
 				mazeTraverseTurn(n, maze2, 2, x, y+1);
+			}
+			else if (maze2.isWalkable(4, x, y)){
+				mazeTraverse(n, maze2, 4, x, y);
 			}
 			break;
 		case 4:
@@ -577,6 +591,9 @@ public class Exploration1 implements Runnable {
 			}
 			else if (maze2.isWalkable(4, x, y)){
 				mazeTraverse(n, maze2, 4, x, y-1);
+			}
+			else if (maze2.isWalkable(3, x, y)){
+				mazeTraverseTurn(n, maze2, 3, x, y);
 			}
 			break;
 
